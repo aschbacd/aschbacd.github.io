@@ -27,6 +27,7 @@ const Layout = ({ location, title, children }) => {
       <main>{children}</main>
       <footer>
         © {new Date().getFullYear()}, Made with <MdHeart style={{verticalAlign: "-10%"}} fontSize="16px" color="red" beat={true} />
+        {` `}
         by <a href="https://github.com/aschbacd">aschbacd</a>
       </footer>
     </div>
