@@ -1,5 +1,6 @@
 import React from "react"
 import { Link } from "gatsby"
+import MdHeart from 'react-ionicons/lib/MdHeart'
 
 const Layout = ({ location, title, children }) => {
   const rootPath = `${__PATH_PREFIX__}/`
@@ -25,9 +26,8 @@ const Layout = ({ location, title, children }) => {
       <header className="global-header">{header}</header>
       <main>{children}</main>
       <footer>
-        © {new Date().getFullYear()}, Built with
-        {` `}
-        <a href="https://www.gatsbyjs.com">Gatsby</a>
+        © {new Date().getFullYear()}, Made with <MdHeart style={{verticalAlign: "-10%"}} fontSize="16px" color="red" beat={true} />
+        by <a href="https://github.com/aschbacd">aschbacd</a>
       </footer>
     </div>
   )
