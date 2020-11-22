@@ -1,6 +1,7 @@
 ---
 title: MongoDB basics
 date: "2018-10-28"
+author: "aschbacd"
 ---
 
 MongoDB is one of the leading NoSQL databases and is often used when dealing

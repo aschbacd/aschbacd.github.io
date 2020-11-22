@@ -1,6 +1,7 @@
 ---
 title: "Minified Docker images for frontend applications"
 date: "2019-06-06"
+author: "aschbacd"
 ---
 
 Nowadays many developers containerize their projects including json-apis and frontend applications.

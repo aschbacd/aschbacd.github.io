@@ -1,6 +1,7 @@
 ---
 title: "MySQL search optimization"
 date: "2019-05-23"
+author: "aschbacd"
 ---
 
 The goal of this post is to implement a search mechanism that searches for songs and artists in a playlist table,

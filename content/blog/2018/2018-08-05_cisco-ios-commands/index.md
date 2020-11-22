@@ -1,6 +1,7 @@
 ---
 title: Time saving Cisco IOS commands
 date: "2018-08-05"
+author: "aschbacd"
 ---
 
 When viewing the configuration of implemented technologies you often get a huge list returned

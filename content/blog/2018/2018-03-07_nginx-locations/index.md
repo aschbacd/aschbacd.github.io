@@ -1,6 +1,7 @@
 ---
 title: Add locations in Nginx
 date: "2018-03-07"
+author: "aschbacd"
 ---
 
 **What is an Nginx location?**

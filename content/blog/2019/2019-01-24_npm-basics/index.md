@@ -1,6 +1,7 @@
 ---
 title: "NPM basics"
 date: "2019-01-24"
+author: "aschbacd"
 ---
 
 NPM (short for Node Package Manager) is a well known package manager used in web development.

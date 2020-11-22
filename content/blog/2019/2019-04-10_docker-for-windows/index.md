@@ -1,6 +1,7 @@
 ---
 title: "Docker for Windows - The better solution"
 date: "2019-04-10"
+author: "davidkroell"
 ---
 
 Since the official Docker for Windows platform utilizes Hyper-V any other hypervisor won't work anymore.
