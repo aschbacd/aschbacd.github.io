@@ -12,7 +12,7 @@ import IosPin from 'react-ionicons/lib/IosPin'
 import MdBriefcase from 'react-ionicons/lib/MdBriefcase'
 import IosGlobeOutline from 'react-ionicons/lib/IosGlobeOutline'
 import LogoTwitter from 'react-ionicons/lib/LogoTwitter'
-import LogoGitHub from 'react-ionicons/lib/LogoGitHub'
+import LogoGithub from 'react-ionicons/lib/LogoGithub'
 
 const Bio = props => {
   useEffect(() => {
@@ -75,7 +75,7 @@ const Bio = props => {
           {author?.login && (
             <span style={{marginRight: 5}}>
               <a href={"https://github.com/" + author.login} target="_blank" rel="noreferrer">
-                <LogoGitHub style={{verticalAlign: "-7%", marginRight: 2}} fontSize="16px" color="#333" />
+                <LogoGithub style={{verticalAlign: "-7%", marginRight: 2}} fontSize="16px" color="#333" />
               </a>
             </span>
           )}
