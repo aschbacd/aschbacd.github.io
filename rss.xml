@@ -1,0 +1,1034 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[dominikaschbacher.com]]></title><description><![CDATA[Blog for GitHub Pages]]></description><link>https://dominikaschbacher.com</link><generator>GatsbyJS</generator><lastBuildDate>Mon, 18 Jan 2021 15:00:23 GMT</lastBuildDate><item><title><![CDATA[Signed Git Commits]]></title><description><![CDATA[When using git, everybody is able to set any name and email address for their commits by using: So anybody can impersonate you and create…]]></description><link>https://dominikaschbacher.com/2020/12/signed-git-commits/</link><guid isPermaLink="false">https://dominikaschbacher.com/2020/12/signed-git-commits/</guid><pubDate>Tue, 01 Dec 2020 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;When using git, everybody is able to set any name and email address for their commits by using:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token function&quot;&gt;git&lt;/span&gt; config user.name &lt;span class=&quot;token string&quot;&gt;&quot;John Doe&quot;&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;git&lt;/span&gt; config user.email john.doe@example.com&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;So anybody can impersonate you and create commits in your name without your approval. To verify
+it’s you that made a commit you can sign it with your private PGP key. PGP stands for Pretty Good
+Privacy and is an encryption program that allows you to encrypt and sign data using public key
+cryptography. By using asymmetric encryption you are holding a private/secret key, that is able to
+decrypt/sign data and a public key, that can be distributed to anybody to either encrypt data that
+only you should be able to decrypt with your private key or to verify it’s you that signed a piece
+of data.&lt;/p&gt;
+&lt;p&gt;So according to the principles of public key cryptography you are the only one that is able to
+sign data in your name, because you are the only one holding your private/secret key. Enough
+theory let’s get started.&lt;/p&gt;
+&lt;h2&gt;Create a PGP key pair&lt;/h2&gt;
+&lt;p&gt;In order to create a PGP key pair we need a PGP client on our system. In this case we are using
+GNU Privacy Guard or GnuPG. You can install it by using a package manger or you can also do it
+&lt;a href=&quot;https://gnupg.org/&quot;&gt;by hand&lt;/a&gt;:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# MacOS&lt;/span&gt;
+brew &lt;span class=&quot;token function&quot;&gt;install&lt;/span&gt; gnupg
+
+&lt;span class=&quot;token comment&quot;&gt;# Debian&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;apt&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;install&lt;/span&gt; gpg
+
+&lt;span class=&quot;token comment&quot;&gt;# Arch Linux&lt;/span&gt;
+pacman -S gnupg
+
+&lt;span class=&quot;token comment&quot;&gt;# Fedora / CentOS&lt;/span&gt;
+yum &lt;span class=&quot;token function&quot;&gt;install&lt;/span&gt; gpg
+
+&lt;span class=&quot;token comment&quot;&gt;# Windows&lt;/span&gt;
+winget &lt;span class=&quot;token function&quot;&gt;install&lt;/span&gt; GnuPG.GnuPG&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;After you’ve installed GnuPG on your workstation you can create a key pair by running the following
+command. Make sure to use the same email address as the one used for your GitHub / GitLab account.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;text&quot;&gt;&lt;pre class=&quot;language-text&quot;&gt;&lt;code class=&quot;language-text&quot;&gt;$ gpg --gen-key
+
+gpg (GnuPG) 2.2.12; Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+gpg: directory &amp;#39;/root/.gnupg&amp;#39; created
+gpg: keybox &amp;#39;/root/.gnupg/pubring.kbx&amp;#39; created
+Note: Use &amp;quot;gpg --full-generate-key&amp;quot; for a full featured key generation dialog.
+
+GnuPG needs to construct a user ID to identify your key.
+
+Real name: John Doe
+Email address: john.doe@example.com
+You selected this USER-ID:
+    &amp;quot;John Doe &amp;lt;john.doe@example.com&amp;gt;&amp;quot;
+
+Change (N)ame, (E)mail, or (O)kay/(Q)uit? O
+
+We need to generate a lot of random bytes. It is a good idea to perform
+some other action (type on the keyboard, move the mouse, utilize the
+disks) during the prime generation; this gives the random number
+generator a better chance to gain enough entropy.
+
+gpg: /root/.gnupg/trustdb.gpg: trustdb created
+gpg: key EBC5077B9E800AAA marked as ultimately trusted
+gpg: directory &amp;#39;/root/.gnupg/openpgp-revocs.d&amp;#39; created
+gpg: revocation certificate stored as &amp;#39;/root/.gnupg/openpgp-revocs.d/E1D7E4402C4D7765C9D1DF0AEBC5077B9E800AAA.rev&amp;#39;
+public and secret key created and signed.
+
+pub   rsa3072 2020-12-01 [SC] [expires: 2022-12-01]
+      E1D7E4402C4D7765C9D1DF0AEBC5077B9E800AAA
+uid                      John Doe &amp;lt;john.doe@example.com&amp;gt;
+sub   rsa3072 2020-12-01 [E] [expires: 2022-12-01]&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You can also run &lt;code class=&quot;language-text&quot;&gt;gpg --full-generate-key&lt;/code&gt; to get advanced options for the key generation like
+the key size, expiration date, …&lt;/p&gt;
+&lt;h2&gt;Configure Git to use the PGP key&lt;/h2&gt;
+&lt;p&gt;First make sure that your name and email address are set in the git config. For that you can run
+&lt;code class=&quot;language-text&quot;&gt;git config --list&lt;/code&gt;. If they are not set or if you want to override them run:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token function&quot;&gt;git&lt;/span&gt; config --global user.name &lt;span class=&quot;token string&quot;&gt;&quot;John Doe&quot;&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;git&lt;/span&gt; config --global user.email john.doe@example.com&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;After that you need to get the id of your PGP key so that it can be specified in the git config.
+To get the id run:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;text&quot;&gt;&lt;pre class=&quot;language-text&quot;&gt;&lt;code class=&quot;language-text&quot;&gt;$ gpg --list-keys
+
+gpg: checking the trustdb
+gpg: marginals needed: 3  completes needed: 1  trust model: pgp
+gpg: depth: 0  valid:   1  signed:   0  trust: 0-, 0q, 0n, 0m, 0f, 1u
+gpg: next trustdb check due at 2022-12-01
+/root/.gnupg/pubring.kbx
+------------------------
+pub   rsa3072 2020-12-01 [SC] [expires: 2022-12-01]
+      E1D7E4402C4D7765C9D1DF0AEBC5077B9E800AAA
+uid           [ultimate] John Doe &amp;lt;john.doe@example.com&amp;gt;
+sub   rsa3072 2020-12-01 [E] [expires: 2022-12-01]&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To set the signing key and also the gpg executable run:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# Set signing key&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;git&lt;/span&gt; config --global user.signingkey E1D7E4402C4D7765C9D1DF0AEBC5077B9E800AAA
+
+&lt;span class=&quot;token comment&quot;&gt;# Set gpg executable&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;git&lt;/span&gt; config --global gpg.program gpg&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;h2&gt;Configure GitHub / GitLab&lt;/h2&gt;
+&lt;p&gt;Next you need to configure your Git-repository manager (GitHub / GitLab). GitHub / GitLab must be
+aware that the key that is being used to sign commits is actually yours. Therefore you need to
+copy your public key (that can be shared with anyone) and paste it in your account settings.&lt;/p&gt;
+&lt;p&gt;To get the public key run:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;text&quot;&gt;&lt;pre class=&quot;language-text&quot;&gt;&lt;code class=&quot;language-text&quot;&gt;$ gpg --export --armour john.doe@example.com
+
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mQGNBF/GSCwBDADN7HszVc8IZ9RbzmxuWhbJ0uYOUGeOLugeotG8Z4Joki4ftWuN
+4H1mvbFStUCl4FWIlauETIvB8gsjlfmPlpbsybAFF0u17LJy8/J7FezZOOwHbMD4
+cNRdzqf45qD/0C3eZT4NtjoBaDggCBX7HqoGzFEhLuu+5P3qsPt/OrhiI38RaYym
+KBl8NVvVjFzeo69OjcqzI4giH7tbZHb5KL/qe64qzD67aupbcbW3aef+Uoxyy445
+bQ9nif9buEXvLZAgbc8xfjw++k5uJVAEEb73DzNiLkrhQNVIiST8yKzIjeAL4ysm
+wmronOFerccw6T9q6I4xITvOS0gQVzQtUvL80bj5M2qSom/YSbjfJWRS61rLtEH/
+spnuFk0mV0GFMJuVyhiZc8Q39qLlBUMlltfxUYbzQBfA4svdgypyCdLG5Jai1ru3
+bcAMBb5N6Flmt/ht9Q7hXZqeuI6RZWx7Uut9ghCA6vsx14rpTeCrCTLAGJB0AT1p
+DWeUxS/p2kAZA5kAEQEAAbQoRG9taW5payBBc2NoYmFjaGVyIDxhc2NoaTEyMzFA
+Z21haWwuY29tPokB1AQTAQoAPhYhBOHX5EAsTXdlydHfCuvFB3uegAqqBQJfxkgs
+AhsDBQkDwmcABQsJCAcCBhUKCQgLAgQWAgMBAh4BAheAAAoJEOvFB3uegAqqrOQL
+/R2mLbKcNTEcrd88VIsUTSb5LA1cckML29C3It2wmw3u1YqsaQIPewD/EM9oqaUl
+eBexnRY06TuZVuwpCvnsxAB5+vX/ASiKOcuU2FTPLIGmwObZa8j3y7Uw3g4cD9Bs
+kV03tIjULXZSwdBV83sBN7M01JmMe2GfrAVz4k6i9GYZEzRxL+gh0ltX2q9r2537
+5eTECDTeKq2vq9yY+Nt+R1D9PQPNF5gd/1XSvy4K6yOkuJ3/DOMAHcPKcnpn78rC
+hiKN0x7+c5Seld0djDq9AtfayN10hWo4SWa7nmt+tuNyEvI/Sy1oBMflg0oVe5jm
+WaIBAQhvM2b/W/OWF8iPkNUfTmiAQWIqEE7/t5uj6ncoEp7D3BjVWhJFJGVrLhXd
+4us1n1pk14uuun5uEadqeTl10KlHg0ZOfYdTVT7acq749oZVUyXDIHpPMrc2pqA4
+rS7UXF0x2opBYFYtFoqUntfd0iWCeOuLaFjzT5bDLo/aVs5mr5iecPtx1t9ZPrvj
+SLkBjQRfxkgsAQwAtuxw+0fLuWHMgh//5+cWX3tMygZi5BiXtOieQSGMyDryNum8
+DFGxCzrCY4JEY4cphbgq3sCLfc/wKCP/lYOh9T3Z5wIU5BZtEa8HSAxzN/9hfo2/
+1+DeAxBPBJFZSh/iDtyV/nG0KiFbyeCB8hzLghGbA2afGr4WDlouas5zgbVH3t60
+8IuSTBNYJ/NCFNfKC66O8lUEoJHdA3k6HM1PmZ4ToqH1oWui1SbAJQ4FEw5QHyBS
+NiPAXHGhc57xl86EpuNO3AzDqpX3ov+P9kl7Tj6IUOoDb3RkYpLe4JoRATjb3HNq
+HzIj7iznTO0gi/7gQsIMSaL3X1qbeiP1XzZaY4DNTLUAd/42LqE0V+f7RIqMZEsY
+8MdKt2ONOXRYB11ZadjUFtCz3bLoqJUuPSJcwKFvJLI/j6xGTty/nBAQ/nXt4QLw
+hWg9BGYOz9e28iWQIdOJPPOVJ1m6tploJlzCampqnpnUizxIoc65n0GMYUgvtf99
+2ttx/AmLVMujMqwDABEBAAGJAbwEGAEKACYWIQTh1+RALE13ZcnR3wrrxQd7noAK
+qgUCX8ZILAIbDAUJA8JnAAAKCRDrxQd7noAKqiOdDACkwxrwxpq9KqpsYuqkV/av
+accWVLDZ1SGQ4P2lWV07AwShUcJTN7pPjZKull6dOPrFb0Bmm2DXC9DlPn/rme6d
+MqmyxG1PfWhx1wV3BLubpXjthQziTtsgscds/Fyk21LSahox/XwXsc1+O76vWV+o
+Kmo3op2t5frR7tacXv1YG+23JXJooupA0C/1vfPfQOF8g0Y2PDuUb1Pi16QiXjGR
+M3aDJ6/f2cS3BvmokiUISYRerxIumLYl0IZUPfV9yrPaBHKa+eUJQfGEtLR/glea
+XLGexYeYOLHrvMvVyo7UVn7VDVXYpddZNTrc69x83l7oqWVJjykqdANcc0IVvzn4
+PtmnJgdM4c+i1rURRG4mVFDgT0RNzKOId77D0pO7zVPtO2M/Y/7sYmxQzBXm78eG
+1mXsDHfP9vr2/7HcPdf1gA9o0xhScuGDOOMo7hZnH8mqVCkCrzLjIXVk8mt6TAA0
+7q4ju/ZYd8wZGef7G5asmcbOlwt6iKooF4AFpQUU4fY=
+=ASke
+-----END PGP PUBLIC KEY BLOCK-----&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;GitHub&lt;/h3&gt;
+&lt;p&gt;Go to &lt;a href=&quot;https://github.com/settings/keys&quot;&gt;https://github.com/settings/keys&lt;/a&gt; and click on “New GPG key”. Then copy your public key
+(make sure to also include the beginning and end line) and paste it in the text field on GitHub.&lt;/p&gt;
+&lt;p&gt;&lt;span
+      class=&quot;gatsby-resp-image-wrapper&quot;
+      style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 630px; &quot;
+    &gt;
+      &lt;a
+    class=&quot;gatsby-resp-image-link&quot;
+    href=&quot;/static/d50768fb9f4219089bcc3c4c47c2489b/8f12b/add_gpg_key_github.jpg&quot;
+    style=&quot;display: block&quot;
+    target=&quot;_blank&quot;
+    rel=&quot;noopener&quot;
+  &gt;
+    &lt;span
+    class=&quot;gatsby-resp-image-background-image&quot;
+    style=&quot;padding-bottom: 45.56962025316456%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/jpeg;base64,/9j/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wgARCAAJABQDASIAAhEBAxEB/8QAGQAAAgMBAAAAAAAAAAAAAAAAAAECAwQF/8QAFAEBAAAAAAAAAAAAAAAAAAAAAf/aAAwDAQACEAMQAAAB7MqtQIYv/8QAGRAAAQUAAAAAAAAAAAAAAAAAEAABAgMS/9oACAEBAAEFAtJpCk//xAAWEQEBAQAAAAAAAAAAAAAAAAABEBH/2gAIAQMBAT8BHZ//xAAUEQEAAAAAAAAAAAAAAAAAAAAQ/9oACAECAQE/AT//xAAWEAEBAQAAAAAAAAAAAAAAAAAQATH/2gAIAQEABj8Cxr//xAAaEAACAgMAAAAAAAAAAAAAAAABEAARITFx/9oACAEBAAE/IcDBCapa9v8A/9oADAMBAAIAAwAAABAMD//EABURAQEAAAAAAAAAAAAAAAAAABEQ/9oACAEDAQE/EAM//8QAFxEBAAMAAAAAAAAAAAAAAAAAARARIf/aAAgBAgEBPxAb2P/EABkQAQADAQEAAAAAAAAAAAAAAAEAESEgQf/aAAgBAQABPxBS0MYLxv2W8f8A/9k=&apos;); background-size: cover; display: block;&quot;
+  &gt;&lt;/span&gt;
+  &lt;img
+        class=&quot;gatsby-resp-image-image&quot;
+        alt=&quot;Add GPG key GitHub&quot;
+        title=&quot;Add GPG key GitHub&quot;
+        src=&quot;/static/d50768fb9f4219089bcc3c4c47c2489b/828fb/add_gpg_key_github.jpg&quot;
+        srcset=&quot;/static/d50768fb9f4219089bcc3c4c47c2489b/ff44c/add_gpg_key_github.jpg 158w,
+/static/d50768fb9f4219089bcc3c4c47c2489b/a6688/add_gpg_key_github.jpg 315w,
+/static/d50768fb9f4219089bcc3c4c47c2489b/828fb/add_gpg_key_github.jpg 630w,
+/static/d50768fb9f4219089bcc3c4c47c2489b/0ede0/add_gpg_key_github.jpg 945w,
+/static/d50768fb9f4219089bcc3c4c47c2489b/3ac88/add_gpg_key_github.jpg 1260w,
+/static/d50768fb9f4219089bcc3c4c47c2489b/8f12b/add_gpg_key_github.jpg 1506w&quot;
+        sizes=&quot;(max-width: 630px) 100vw, 630px&quot;
+        style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot;
+        loading=&quot;lazy&quot;
+      /&gt;
+  &lt;/a&gt;
+    &lt;/span&gt;&lt;/p&gt;
+&lt;h3&gt;GitLab&lt;/h3&gt;
+&lt;p&gt;Go to &lt;a href=&quot;https://gitlab.com/-/profile/gpg_keys&quot;&gt;https://gitlab.com/-/profile/gpg_keys&lt;/a&gt;. Then copy your key (make sure to also include the
+beginning and end line) and paste it in the text field on GitLab.&lt;/p&gt;
+&lt;p&gt;&lt;span
+      class=&quot;gatsby-resp-image-wrapper&quot;
+      style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 630px; &quot;
+    &gt;
+      &lt;a
+    class=&quot;gatsby-resp-image-link&quot;
+    href=&quot;/static/fa2f02d5979f8f632b20d33e1899ceb4/5e3c2/add_gpg_key_gitlab.jpg&quot;
+    style=&quot;display: block&quot;
+    target=&quot;_blank&quot;
+    rel=&quot;noopener&quot;
+  &gt;
+    &lt;span
+    class=&quot;gatsby-resp-image-background-image&quot;
+    style=&quot;padding-bottom: 51.89873417721519%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/jpeg;base64,/9j/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wgARCAAKABQDASIAAhEBAxEB/8QAGAABAAMBAAAAAAAAAAAAAAAAAAECAwX/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAHtTTcA/8QAGRAAAQUAAAAAAAAAAAAAAAAAEAADERIy/9oACAEBAAEFApVgzgf/xAAUEQEAAAAAAAAAAAAAAAAAAAAQ/9oACAEDAQE/AT//xAAUEQEAAAAAAAAAAAAAAAAAAAAQ/9oACAECAQE/AT//xAAUEAEAAAAAAAAAAAAAAAAAAAAg/9oACAEBAAY/Al//xAAaEAACAwEBAAAAAAAAAAAAAAARIQABEEFR/9oACAEBAAE/IRrkHzGZu4M//9oADAMBAAIAAwAAABAQz//EABYRAQEBAAAAAAAAAAAAAAAAAAEREP/aAAgBAwEBPxAaXP/EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQIBAT8QP//EABwQAQABBAMAAAAAAAAAAAAAAAEAEBExkSFBUf/aAAgBAQABPxBag4F33BuDiJZd2Z5lnhqn/9k=&apos;); background-size: cover; display: block;&quot;
+  &gt;&lt;/span&gt;
+  &lt;img
+        class=&quot;gatsby-resp-image-image&quot;
+        alt=&quot;Add GPG key GitLab&quot;
+        title=&quot;Add GPG key GitLab&quot;
+        src=&quot;/static/fa2f02d5979f8f632b20d33e1899ceb4/828fb/add_gpg_key_gitlab.jpg&quot;
+        srcset=&quot;/static/fa2f02d5979f8f632b20d33e1899ceb4/ff44c/add_gpg_key_gitlab.jpg 158w,
+/static/fa2f02d5979f8f632b20d33e1899ceb4/a6688/add_gpg_key_gitlab.jpg 315w,
+/static/fa2f02d5979f8f632b20d33e1899ceb4/828fb/add_gpg_key_gitlab.jpg 630w,
+/static/fa2f02d5979f8f632b20d33e1899ceb4/0ede0/add_gpg_key_gitlab.jpg 945w,
+/static/fa2f02d5979f8f632b20d33e1899ceb4/3ac88/add_gpg_key_gitlab.jpg 1260w,
+/static/fa2f02d5979f8f632b20d33e1899ceb4/5e3c2/add_gpg_key_gitlab.jpg 1288w&quot;
+        sizes=&quot;(max-width: 630px) 100vw, 630px&quot;
+        style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot;
+        loading=&quot;lazy&quot;
+      /&gt;
+  &lt;/a&gt;
+    &lt;/span&gt;&lt;/p&gt;
+&lt;h2&gt;Testing&lt;/h2&gt;
+&lt;p&gt;After configuring your Git-repository manager you can test if it works by doing a test commit.
+Execute the following commands to create a test setup where you can check if everything works
+as expected.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# Create test directory&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;mkdir&lt;/span&gt; /tmp/git-signed-commits
+&lt;span class=&quot;token builtin class-name&quot;&gt;cd&lt;/span&gt; /tmp/git-signed-commits
+
+&lt;span class=&quot;token comment&quot;&gt;# Initialize git repository&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;git&lt;/span&gt; init
+
+&lt;span class=&quot;token comment&quot;&gt;# Add test file&lt;/span&gt;
+&lt;span class=&quot;token builtin class-name&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;token builtin class-name&quot;&gt;test&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;&gt;&lt;/span&gt; test.txt
+
+&lt;span class=&quot;token comment&quot;&gt;# Stage file&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;git&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;add&lt;/span&gt; test.txt&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now you can commit the changes but don’t forget to use the argument &lt;code class=&quot;language-text&quot;&gt;-S&lt;/code&gt; to sign the commit.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;text&quot;&gt;&lt;pre class=&quot;language-text&quot;&gt;&lt;code class=&quot;language-text&quot;&gt;$ git commit -S -m &amp;quot;Initial commit&amp;quot;
+
+error: gpg failed to sign the data
+fatal: failed to write commit object&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;If you are getting the same error run the following:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# Export tty&lt;/span&gt;
+&lt;span class=&quot;token builtin class-name&quot;&gt;export&lt;/span&gt; &lt;span class=&quot;token assign-left variable&quot;&gt;GPG_TTY&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token variable&quot;&gt;&lt;span class=&quot;token variable&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;tty&lt;/span&gt;&lt;span class=&quot;token variable&quot;&gt;)&lt;/span&gt;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# Add to bashrc&lt;/span&gt;
+&lt;span class=&quot;token builtin class-name&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;export GPG_TTY=&lt;span class=&quot;token variable&quot;&gt;&lt;span class=&quot;token variable&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;tty&lt;/span&gt;&lt;span class=&quot;token variable&quot;&gt;)&lt;/span&gt;&lt;/span&gt;&quot;&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;&gt;&gt;&lt;/span&gt; ~/.bashrc&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;After that you can try running &lt;code class=&quot;language-text&quot;&gt;git commit&lt;/code&gt; again and it should work fine:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;text&quot;&gt;&lt;pre class=&quot;language-text&quot;&gt;&lt;code class=&quot;language-text&quot;&gt;$ git commit -S -m &amp;quot;Initial commit&amp;quot;
+
+[master (root-commit) 4ff4d29] Initial commit
+ 1 file changed, 1 insertion(+)
+ create mode 100644 test.txt&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To test if the verification on GitHub / GitLab works add a remote repository you created on
+GitHub / GitLab (it should be a new repository to prevent any unwanted errors for this test)
+and push the test commit to it.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# Add remote (only add the one you need)&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;git&lt;/span&gt; remote &lt;span class=&quot;token function&quot;&gt;add&lt;/span&gt; github https://github.com/johndoe/test.git
+&lt;span class=&quot;token function&quot;&gt;git&lt;/span&gt; remote &lt;span class=&quot;token function&quot;&gt;add&lt;/span&gt; gitlab https://gitlab.com/johndoe/test.git
+
+&lt;span class=&quot;token comment&quot;&gt;# Push to remote&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;git&lt;/span&gt; push github master
+&lt;span class=&quot;token function&quot;&gt;git&lt;/span&gt; push gitlab master&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;If you take a look at your commit on GitHub / GitLab you will see that the commit is verified,
+because it got signed with your PGP key.&lt;/p&gt;
+&lt;p&gt;&lt;span
+      class=&quot;gatsby-resp-image-wrapper&quot;
+      style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 630px; &quot;
+    &gt;
+      &lt;a
+    class=&quot;gatsby-resp-image-link&quot;
+    href=&quot;/static/08428c82c3e40c88aa9769dfbce7c6d0/69ede/commit_verified_github.jpg&quot;
+    style=&quot;display: block&quot;
+    target=&quot;_blank&quot;
+    rel=&quot;noopener&quot;
+  &gt;
+    &lt;span
+    class=&quot;gatsby-resp-image-background-image&quot;
+    style=&quot;padding-bottom: 8.227848101265824%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/jpeg;base64,/9j/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wgARCAACABQDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAEF/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAH/2gAMAwEAAhADEAAAAd2hAn//xAAUEAEAAAAAAAAAAAAAAAAAAAAQ/9oACAEBAAEFAn//xAAUEQEAAAAAAAAAAAAAAAAAAAAQ/9oACAEDAQE/AT//xAAUEQEAAAAAAAAAAAAAAAAAAAAQ/9oACAECAQE/AT//xAAUEAEAAAAAAAAAAAAAAAAAAAAQ/9oACAEBAAY/An//xAAVEAEBAAAAAAAAAAAAAAAAAAABEP/aAAgBAQABPyEv/9oADAMBAAIAAwAAABAD/wD/xAAUEQEAAAAAAAAAAAAAAAAAAAAQ/9oACAEDAQE/ED//xAAUEQEAAAAAAAAAAAAAAAAAAAAQ/9oACAECAQE/ED//xAAYEAACAwAAAAAAAAAAAAAAAAAAARAxQf/aAAgBAQABPxDY6j//2Q==&apos;); background-size: cover; display: block;&quot;
+  &gt;&lt;/span&gt;
+  &lt;img
+        class=&quot;gatsby-resp-image-image&quot;
+        alt=&quot;Verified Commit GitHub&quot;
+        title=&quot;Verified Commit GitHub&quot;
+        src=&quot;/static/08428c82c3e40c88aa9769dfbce7c6d0/828fb/commit_verified_github.jpg&quot;
+        srcset=&quot;/static/08428c82c3e40c88aa9769dfbce7c6d0/ff44c/commit_verified_github.jpg 158w,
+/static/08428c82c3e40c88aa9769dfbce7c6d0/a6688/commit_verified_github.jpg 315w,
+/static/08428c82c3e40c88aa9769dfbce7c6d0/828fb/commit_verified_github.jpg 630w,
+/static/08428c82c3e40c88aa9769dfbce7c6d0/0ede0/commit_verified_github.jpg 945w,
+/static/08428c82c3e40c88aa9769dfbce7c6d0/3ac88/commit_verified_github.jpg 1260w,
+/static/08428c82c3e40c88aa9769dfbce7c6d0/69ede/commit_verified_github.jpg 1864w&quot;
+        sizes=&quot;(max-width: 630px) 100vw, 630px&quot;
+        style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot;
+        loading=&quot;lazy&quot;
+      /&gt;
+  &lt;/a&gt;
+    &lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span
+      class=&quot;gatsby-resp-image-wrapper&quot;
+      style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 630px; &quot;
+    &gt;
+      &lt;a
+    class=&quot;gatsby-resp-image-link&quot;
+    href=&quot;/static/33fea898431b05697a0c0655eaa5d1d5/77502/commit_verified_gitlab.jpg&quot;
+    style=&quot;display: block&quot;
+    target=&quot;_blank&quot;
+    rel=&quot;noopener&quot;
+  &gt;
+    &lt;span
+    class=&quot;gatsby-resp-image-background-image&quot;
+    style=&quot;padding-bottom: 5.69620253164557%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/jpeg;base64,/9j/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wgARCAABABQDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAIF/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEAMQAAAB3LCQf//EABUQAQEAAAAAAAAAAAAAAAAAAAIQ/9oACAEBAAEFAjf/xAAUEQEAAAAAAAAAAAAAAAAAAAAQ/9oACAEDAQE/AT//xAAUEQEAAAAAAAAAAAAAAAAAAAAQ/9oACAECAQE/AT//xAAUEAEAAAAAAAAAAAAAAAAAAAAQ/9oACAEBAAY/An//xAAXEAADAQAAAAAAAAAAAAAAAAAAATEQ/9oACAEBAAE/IYHM/9oADAMBAAIAAwAAABD0D//EABYRAAMAAAAAAAAAAAAAAAAAAAEQMf/aAAgBAwEBPxA1f//EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQIBAT8QP//EABcQAQEBAQAAAAAAAAAAAAAAAAAxAXH/2gAIAQEAAT8Qmpxj/9k=&apos;); background-size: cover; display: block;&quot;
+  &gt;&lt;/span&gt;
+  &lt;img
+        class=&quot;gatsby-resp-image-image&quot;
+        alt=&quot;Verified Commit GitLab&quot;
+        title=&quot;Verified Commit GitLab&quot;
+        src=&quot;/static/33fea898431b05697a0c0655eaa5d1d5/828fb/commit_verified_gitlab.jpg&quot;
+        srcset=&quot;/static/33fea898431b05697a0c0655eaa5d1d5/ff44c/commit_verified_gitlab.jpg 158w,
+/static/33fea898431b05697a0c0655eaa5d1d5/a6688/commit_verified_gitlab.jpg 315w,
+/static/33fea898431b05697a0c0655eaa5d1d5/828fb/commit_verified_gitlab.jpg 630w,
+/static/33fea898431b05697a0c0655eaa5d1d5/0ede0/commit_verified_gitlab.jpg 945w,
+/static/33fea898431b05697a0c0655eaa5d1d5/3ac88/commit_verified_gitlab.jpg 1260w,
+/static/33fea898431b05697a0c0655eaa5d1d5/77502/commit_verified_gitlab.jpg 1910w&quot;
+        sizes=&quot;(max-width: 630px) 100vw, 630px&quot;
+        style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot;
+        loading=&quot;lazy&quot;
+      /&gt;
+  &lt;/a&gt;
+    &lt;/span&gt;&lt;/p&gt;</content:encoded></item><item><title><![CDATA[Minified Docker images for frontend applications]]></title><description><![CDATA[Nowadays many developers containerize their projects including json-apis and frontend applications.
+In Go for example it is common to use…]]></description><link>https://dominikaschbacher.com/2019/06/minified-docker-images-for-frontend-applications/</link><guid isPermaLink="false">https://dominikaschbacher.com/2019/06/minified-docker-images-for-frontend-applications/</guid><pubDate>Thu, 06 Jun 2019 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;Nowadays many developers containerize their projects including json-apis and frontend applications.
+In Go for example it is common to use multi-staged builds in docker where in the first step a binary is being compiled
+from the source code and in the second step this file is being copied to an empty docker image that is build from scratch.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;docker&quot;&gt;&lt;pre class=&quot;language-docker&quot;&gt;&lt;code class=&quot;language-docker&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# Build&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;FROM&lt;/span&gt; golang&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;1.12&lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;alpine AS base
+&lt;span class=&quot;token keyword&quot;&gt;COPY&lt;/span&gt; . /go/src/github.com/dev/project
+
+&lt;span class=&quot;token keyword&quot;&gt;WORKDIR&lt;/span&gt; /go/src/github.com/dev/project
+&lt;span class=&quot;token keyword&quot;&gt;RUN&lt;/span&gt; apk add git gcc
+
+&lt;span class=&quot;token comment&quot;&gt;# Go modules&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;ENV&lt;/span&gt; GO111MODULE=on
+&lt;span class=&quot;token keyword&quot;&gt;RUN&lt;/span&gt; go mod download
+
+&lt;span class=&quot;token comment&quot;&gt;# Compile&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;RUN&lt;/span&gt; go build &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;a &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;tags netgo &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;ldflags &lt;span class=&quot;token string&quot;&gt;&apos;-w&apos;&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;o /go/bin/project /go/src/github.com/dev/project/main.go
+
+&lt;span class=&quot;token comment&quot;&gt;# Package&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;FROM&lt;/span&gt; scratch
+&lt;span class=&quot;token keyword&quot;&gt;COPY&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;from=base /go/bin/project /project
+&lt;span class=&quot;token keyword&quot;&gt;ENTRYPOINT&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;/project&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Multi-staged builds have the advantage of being much smaller than single-staged builds, where dependencies
+necessary for the compiling process are also contained within the actual image used in production. Unfortunately
+many developers containerizing frontend applications written in JavaScript (React, Angular, VueJS) use the same
+image to build and to serve their frontend application.&lt;/p&gt;
+&lt;p&gt;In this example I will use React to show you how to minify your Docker image to gain storage and also performance.
+In React you can create a production build by using the following command:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; run build&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;When the command finishes a new folder called &lt;code class=&quot;language-text&quot;&gt;build&lt;/code&gt; will appear in your project folder. This folder contains your
+frontend application minified and ready to be executed. At this point you can manually execute the file &lt;code class=&quot;language-text&quot;&gt;index.html&lt;/code&gt;
+and you will get the same response as in development.&lt;/p&gt;
+&lt;p&gt;Now we only need a web server that is capable of serving HTML-files
+and their assets, so pretty much every web server you can think of. In this example I will use Nginx because it is a
+very fast, reliable and small web server that is also available as a Docker image.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;docker&quot;&gt;&lt;pre class=&quot;language-docker&quot;&gt;&lt;code class=&quot;language-docker&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# Build&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;FROM&lt;/span&gt; node&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;11&lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;slim AS base
+
+&lt;span class=&quot;token comment&quot;&gt;# Workdir&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;RUN&lt;/span&gt; mkdir /usr/src/app
+&lt;span class=&quot;token keyword&quot;&gt;WORKDIR&lt;/span&gt; /usr/src/app
+
+&lt;span class=&quot;token comment&quot;&gt;# Add environment path&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;ENV&lt;/span&gt; PATH /usr/src/app/node_modules/.bin&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;$PATH
+
+&lt;span class=&quot;token comment&quot;&gt;# Compile static page&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;COPY&lt;/span&gt; . /usr/src/app
+&lt;span class=&quot;token keyword&quot;&gt;RUN&lt;/span&gt; npm install
+&lt;span class=&quot;token keyword&quot;&gt;RUN&lt;/span&gt; npm run build
+
+&lt;span class=&quot;token comment&quot;&gt;# Package&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;FROM&lt;/span&gt; nginx&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;alpine
+&lt;span class=&quot;token keyword&quot;&gt;COPY&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;from=base /usr/src/app/build /usr/share/nginx/html&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;As you can see in the first stage the project is being build by using the official NPM Docker image
+and in the second stage the &lt;code class=&quot;language-text&quot;&gt;build&lt;/code&gt; folder is being copied to the web root of the Nginx web server.
+By removing the build image afterwards (about 100MB) you will be left with a production Docker image
+with about 15 - 20MB (the production image can also get bigger if many image assets are used in the
+project).&lt;/p&gt;</content:encoded></item><item><title><![CDATA[MySQL search optimization]]></title><description><![CDATA[The goal of this post is to implement a search mechanism that searches for songs and artists in a playlist table,
+that has about 11 million…]]></description><link>https://dominikaschbacher.com/2019/05/mysql-search-optimization/</link><guid isPermaLink="false">https://dominikaschbacher.com/2019/05/mysql-search-optimization/</guid><pubDate>Thu, 23 May 2019 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;The goal of this post is to implement a search mechanism that searches for songs and artists in a playlist table,
+that has about 11 million entries. All data has been gathered from a third party application that provides a history
+of the songs played on Austrian radio stations. One entry consists of the play date, the title and the artist.
+Unfortunately the data has to be downloaded as an html file that can be converted into SQL statements later on but
+does not have any structure.&lt;/p&gt;
+&lt;p&gt;Thanks to &lt;a href=&quot;https://github.com/davidkroell&quot;&gt;@davidkroell&lt;/a&gt; for the help concerning the database optimization.&lt;/p&gt;
+&lt;h2&gt;Storing the data&lt;/h2&gt;
+&lt;p&gt;At the beginning all the data had to be stored in a MySQL database. Therefore 2 tables were created: &lt;em&gt;radio_stations&lt;/em&gt; and &lt;em&gt;songs&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Radio Stations:&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;The table &lt;em&gt;radio_stations&lt;/em&gt; was created using the following SQL statement. The radio stations were inserted manually
+and contain and id, an abbreviation that is used when downloading new data from the third party application and a display name.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;sql&quot;&gt;&lt;pre class=&quot;language-sql&quot;&gt;&lt;code class=&quot;language-sql&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;CREATE&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;TABLE&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt;radio_stations&lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt;id&lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;INT&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;AUTO_INCREMENT&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt;abbreviation&lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;VARCHAR&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;20&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt;name&lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;VARCHAR&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;CONSTRAINT&lt;/span&gt; pk_radio_stations &lt;span class=&quot;token keyword&quot;&gt;PRIMARY&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;KEY&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;id&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;id&lt;/th&gt;
+&lt;th&gt;abbreviation&lt;/th&gt;
+&lt;th&gt;name&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;fm4&lt;/td&gt;
+&lt;td&gt;FM4&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;oe3&lt;/td&gt;
+&lt;td&gt;Hitradio Ö3&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;radio_bgl&lt;/td&gt;
+&lt;td&gt;Radio Burgenland&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;radio_ktn&lt;/td&gt;
+&lt;td&gt;Radio Kärnten&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;radio_noe&lt;/td&gt;
+&lt;td&gt;Radio Niederösterreich&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;radio_ooe&lt;/td&gt;
+&lt;td&gt;Radio Oberösterreich&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;radio_sbg&lt;/td&gt;
+&lt;td&gt;Radio Salzburg&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;radio_stmk&lt;/td&gt;
+&lt;td&gt;Radio Steiermark&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;9&lt;/td&gt;
+&lt;td&gt;radio_tirol&lt;/td&gt;
+&lt;td&gt;Radio Tirol&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;10&lt;/td&gt;
+&lt;td&gt;radio_vbg&lt;/td&gt;
+&lt;td&gt;Radio Vorarlberg&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;11&lt;/td&gt;
+&lt;td&gt;radio_wien&lt;/td&gt;
+&lt;td&gt;Radio Wien&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;strong&gt;Songs:&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;During the first iteration the table &lt;em&gt;songs&lt;/em&gt; had the following columns. This table has not been normalized
+because of the sloppy input data and also for benchmarks. All data has been stored by using generated SQL
+files from the downloaded HTML file. To convert the HTML into an SQL file a custom bash script was used that
+replaced the HTML syntax with SQL syntax by using &lt;em&gt;sed&lt;/em&gt;.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;sql&quot;&gt;&lt;pre class=&quot;language-sql&quot;&gt;&lt;code class=&quot;language-sql&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;CREATE&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;TABLE&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt;songs&lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt;id&lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;INT&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;AUTO_INCREMENT&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt;radio_station_id&lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;INT&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt;play_date&lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;DATETIME&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt;title&lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;VARCHAR&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;255&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt;artist&lt;span class=&quot;token punctuation&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;VARCHAR&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;255&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;constraint&lt;/span&gt; pk_songs &lt;span class=&quot;token keyword&quot;&gt;primary&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;key&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;id&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;constraint&lt;/span&gt; fk_songs_radio_stations &lt;span class=&quot;token keyword&quot;&gt;foreign&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;key&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;radio_station_id&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;references&lt;/span&gt; radio_stations&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;id&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;id&lt;/th&gt;
+&lt;th&gt;radio&lt;em&gt;station&lt;/em&gt;id&lt;/th&gt;
+&lt;th&gt;play_date&lt;/th&gt;
+&lt;th&gt;title&lt;/th&gt;
+&lt;th&gt;artist&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;2012-01-01 00:00:00&lt;/td&gt;
+&lt;td&gt;Title 01&lt;/td&gt;
+&lt;td&gt;Artist 01&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;2012-01-01 00:05:00&lt;/td&gt;
+&lt;td&gt;Title 02&lt;/td&gt;
+&lt;td&gt;Artist 02&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;2012-01-01 00:10:00&lt;/td&gt;
+&lt;td&gt;Title 03&lt;/td&gt;
+&lt;td&gt;Artist 03&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;…&lt;/td&gt;
+&lt;td&gt;…&lt;/td&gt;
+&lt;td&gt;…&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;…&lt;/td&gt;
+&lt;td&gt;…&lt;/td&gt;
+&lt;td&gt;…&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2&gt;Search&lt;/h2&gt;
+&lt;p&gt;The first search implementation only allowed searching for song titles and not for artists.
+This has been realized using the following query (simple but inefficient).&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;sql&quot;&gt;&lt;pre class=&quot;language-sql&quot;&gt;&lt;code class=&quot;language-sql&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;SELECT&lt;/span&gt; title&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; artist&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;COUNT&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;as&lt;/span&gt; count &lt;span class=&quot;token keyword&quot;&gt;FROM&lt;/span&gt; songs
+&lt;span class=&quot;token keyword&quot;&gt;WHERE&lt;/span&gt; radio_station_id &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;1&lt;/span&gt;
+&lt;span class=&quot;token operator&quot;&gt;AND&lt;/span&gt; title &lt;span class=&quot;token operator&quot;&gt;like&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;%test%&quot;&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;GROUP&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;BY&lt;/span&gt; title&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; artist&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; radio_station_id
+&lt;span class=&quot;token keyword&quot;&gt;ORDER&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;BY&lt;/span&gt; count &lt;span class=&quot;token keyword&quot;&gt;DESC&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;title&lt;/th&gt;
+&lt;th&gt;artist&lt;/th&gt;
+&lt;th&gt;count&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Whitest Boy On The Beach&lt;/td&gt;
+&lt;td&gt;Fat White Family&lt;/td&gt;
+&lt;td&gt;95&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;The Greatest View&lt;/td&gt;
+&lt;td&gt;Flume / Isabelle Manfredi&lt;/td&gt;
+&lt;td&gt;77&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Test&lt;/td&gt;
+&lt;td&gt;Little Dragon&lt;/td&gt;
+&lt;td&gt;60&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;strong&gt;Benchmarks:&lt;/strong&gt;&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Search text&lt;/th&gt;
+&lt;th&gt;MySQL speed&lt;/th&gt;
+&lt;th&gt;Go API speed&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;test&lt;/td&gt;
+&lt;td&gt;3094ms&lt;/td&gt;
+&lt;td&gt;3105ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;a&lt;/td&gt;
+&lt;td&gt;3109ms&lt;/td&gt;
+&lt;td&gt;3055ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;bc&lt;/td&gt;
+&lt;td&gt;2390ms&lt;/td&gt;
+&lt;td&gt;2491ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;yellow&lt;/td&gt;
+&lt;td&gt;1391ms&lt;/td&gt;
+&lt;td&gt;1682ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;monday&lt;/td&gt;
+&lt;td&gt;1329ms&lt;/td&gt;
+&lt;td&gt;1557ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2&gt;Optimization 01 - Cached table&lt;/h2&gt;
+&lt;p&gt;The first optimization was a cache table that stores all grouped songs per radio station. Therefore the
+group by can be left away. To insert the grouped entries the following statement has been used:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;sql&quot;&gt;&lt;pre class=&quot;language-sql&quot;&gt;&lt;code class=&quot;language-sql&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;-- CREATE TABLE&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;CREATE&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;TABLE&lt;/span&gt; songs_per_radio_station &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;
+    id &lt;span class=&quot;token keyword&quot;&gt;INT&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;AUTO_INCREMENT&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    title &lt;span class=&quot;token keyword&quot;&gt;VARCHAR&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;255&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    artist &lt;span class=&quot;token keyword&quot;&gt;VARCHAR&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;255&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    radio_station_id &lt;span class=&quot;token keyword&quot;&gt;INT&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    count &lt;span class=&quot;token keyword&quot;&gt;INT&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;CONSTRAINT&lt;/span&gt; pk_songs_per_radio_station &lt;span class=&quot;token keyword&quot;&gt;PRIMARY&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;KEY&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;id&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;CONSTRAINT&lt;/span&gt; fk_songs_per_radio_station_radio_station &lt;span class=&quot;token keyword&quot;&gt;FOREIGN&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;KEY&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;radio_station_id&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;token keyword&quot;&gt;REFERENCES&lt;/span&gt; radio_stations &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;id&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;-- INSERT DATA&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;INSERT&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;INTO&lt;/span&gt; songs_per_radio_station
+&lt;span class=&quot;token keyword&quot;&gt;SELECT&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;null&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;as&lt;/span&gt; id&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; title&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; artist&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; radio_station_id&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;count&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;as&lt;/span&gt; count
+&lt;span class=&quot;token keyword&quot;&gt;FROM&lt;/span&gt; songs
+&lt;span class=&quot;token keyword&quot;&gt;GROUP&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;BY&lt;/span&gt; title&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; artist&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; radio_station_id
+&lt;span class=&quot;token keyword&quot;&gt;ORDER&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;BY&lt;/span&gt; radio_station_id &lt;span class=&quot;token keyword&quot;&gt;asc&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; count &lt;span class=&quot;token keyword&quot;&gt;desc&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Afterwards the following statement can be used to search for a title:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;sql&quot;&gt;&lt;pre class=&quot;language-sql&quot;&gt;&lt;code class=&quot;language-sql&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;SELECT&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;FROM&lt;/span&gt; songs_per_radio_station
+&lt;span class=&quot;token keyword&quot;&gt;WHERE&lt;/span&gt; radio_station_id &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;1&lt;/span&gt;
+&lt;span class=&quot;token operator&quot;&gt;AND&lt;/span&gt; title &lt;span class=&quot;token operator&quot;&gt;like&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;%test%&quot;&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;ORDER&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;BY&lt;/span&gt; count &lt;span class=&quot;token keyword&quot;&gt;DESC&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Search text&lt;/th&gt;
+&lt;th&gt;old MySQL speed&lt;/th&gt;
+&lt;th&gt;new MySQL speed&lt;/th&gt;
+&lt;th&gt;old Go API speed&lt;/th&gt;
+&lt;th&gt;new Go API speed&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;test&lt;/td&gt;
+&lt;td&gt;3094ms&lt;/td&gt;
+&lt;td&gt;110ms&lt;/td&gt;
+&lt;td&gt;3105ms&lt;/td&gt;
+&lt;td&gt;721ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;a&lt;/td&gt;
+&lt;td&gt;3109ms&lt;/td&gt;
+&lt;td&gt;141ms&lt;/td&gt;
+&lt;td&gt;3055ms&lt;/td&gt;
+&lt;td&gt;869ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;bc&lt;/td&gt;
+&lt;td&gt;2390ms&lt;/td&gt;
+&lt;td&gt;94ms&lt;/td&gt;
+&lt;td&gt;2491ms&lt;/td&gt;
+&lt;td&gt;212ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;yellow&lt;/td&gt;
+&lt;td&gt;1391ms&lt;/td&gt;
+&lt;td&gt;78ms&lt;/td&gt;
+&lt;td&gt;1682ms&lt;/td&gt;
+&lt;td&gt;181ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;monday&lt;/td&gt;
+&lt;td&gt;1329ms&lt;/td&gt;
+&lt;td&gt;62ms&lt;/td&gt;
+&lt;td&gt;1557ms&lt;/td&gt;
+&lt;td&gt;188ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2&gt;Optimization 02 - Fulltext Index&lt;/h2&gt;
+&lt;p&gt;After creating a cache table a fulltext index has been used on the cached table. This allows
+the user to search for songs and artists. The best matching case will be shown first and afterwards
+the entries are sorted by count.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;sql&quot;&gt;&lt;pre class=&quot;language-sql&quot;&gt;&lt;code class=&quot;language-sql&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;-- CREATE TABLE&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;CREATE&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;TABLE&lt;/span&gt; songs_per_radio_station &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;
+    id &lt;span class=&quot;token keyword&quot;&gt;INT&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;AUTO_INCREMENT&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    title &lt;span class=&quot;token keyword&quot;&gt;VARCHAR&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;255&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    artist &lt;span class=&quot;token keyword&quot;&gt;VARCHAR&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;255&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    radio_station_id &lt;span class=&quot;token keyword&quot;&gt;INT&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    count &lt;span class=&quot;token keyword&quot;&gt;INT&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    FULLTEXT &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;title&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; artist&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;CONSTRAINT&lt;/span&gt; pk_songs_per_radio_station &lt;span class=&quot;token keyword&quot;&gt;PRIMARY&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;KEY&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;id&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;CONSTRAINT&lt;/span&gt; fk_songs_per_radio_station_radio_station &lt;span class=&quot;token keyword&quot;&gt;FOREIGN&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;KEY&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;radio_station_id&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;token keyword&quot;&gt;REFERENCES&lt;/span&gt; radio_stations &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;id&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;-- INSERT DATA&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;INSERT&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;INTO&lt;/span&gt; songs_per_radio_station
+&lt;span class=&quot;token keyword&quot;&gt;SELECT&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;null&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;as&lt;/span&gt; id&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; title&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; artist&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; radio_station_id&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;count&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;as&lt;/span&gt; count
+&lt;span class=&quot;token keyword&quot;&gt;FROM&lt;/span&gt; songs
+&lt;span class=&quot;token keyword&quot;&gt;GROUP&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;BY&lt;/span&gt; title&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; artist&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; radio_station_id
+&lt;span class=&quot;token keyword&quot;&gt;ORDER&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;BY&lt;/span&gt; radio_station_id &lt;span class=&quot;token keyword&quot;&gt;asc&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; count &lt;span class=&quot;token keyword&quot;&gt;desc&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Songs and artists can be searched using the following query:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;sql&quot;&gt;&lt;pre class=&quot;language-sql&quot;&gt;&lt;code class=&quot;language-sql&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;SELECT&lt;/span&gt; id&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; title&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; artist&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; count
+&lt;span class=&quot;token keyword&quot;&gt;FROM&lt;/span&gt; songs_per_radio_station
+&lt;span class=&quot;token keyword&quot;&gt;WHERE&lt;/span&gt; radio_station_id &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;1&lt;/span&gt;
+&lt;span class=&quot;token operator&quot;&gt;AND&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;MATCH&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;title&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; artist&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; AGAINST &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;test&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;LIMIT&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;30&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;OFFSET&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Search text&lt;/th&gt;
+&lt;th&gt;old MySQL speed&lt;/th&gt;
+&lt;th&gt;new MySQL speed&lt;/th&gt;
+&lt;th&gt;old Go API speed&lt;/th&gt;
+&lt;th&gt;new Go API speed&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;test&lt;/td&gt;
+&lt;td&gt;110ms&lt;/td&gt;
+&lt;td&gt;31ms&lt;/td&gt;
+&lt;td&gt;721ms&lt;/td&gt;
+&lt;td&gt;164ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;a&lt;/td&gt;
+&lt;td&gt;141ms&lt;/td&gt;
+&lt;td&gt;31ms&lt;/td&gt;
+&lt;td&gt;869ms&lt;/td&gt;
+&lt;td&gt;31ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;bc&lt;/td&gt;
+&lt;td&gt;94ms&lt;/td&gt;
+&lt;td&gt;16ms&lt;/td&gt;
+&lt;td&gt;212ms&lt;/td&gt;
+&lt;td&gt;34ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;yellow&lt;/td&gt;
+&lt;td&gt;78ms&lt;/td&gt;
+&lt;td&gt;31ms&lt;/td&gt;
+&lt;td&gt;181ms&lt;/td&gt;
+&lt;td&gt;32ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;monday&lt;/td&gt;
+&lt;td&gt;62ms&lt;/td&gt;
+&lt;td&gt;32ms&lt;/td&gt;
+&lt;td&gt;188ms&lt;/td&gt;
+&lt;td&gt;34ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;These outcomes lead to the final result which is a performance improvement with a maximum request time
+reduction of 1/100 of the original request duration.&lt;/p&gt;</content:encoded></item><item><title><![CDATA[Docker for Windows - The better solution]]></title><description><![CDATA[Since the official Docker for Windows platform utilizes Hyper-V any other hypervisor won’t work anymore.
+After installing Docker for Windows…]]></description><link>https://dominikaschbacher.com/2019/04/docker-for-windows/</link><guid isPermaLink="false">https://dominikaschbacher.com/2019/04/docker-for-windows/</guid><pubDate>Wed, 10 Apr 2019 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;Since the official Docker for Windows platform utilizes Hyper-V any other hypervisor won’t work anymore.
+After installing Docker for Windows, my VMWare virtual machines were not able to start.
+But I still want to use Docker on my laptop without a VM.
+I found out, that Docker has built-in &lt;a href=&quot;https://medium.com/lucjuggery/docker-tips-access-the-docker-daemon-via-ssh-97cd6b44a53&quot;&gt;SSH support&lt;/a&gt; since version 18.09.
+This is made possible through the client-server architecture.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Note: I also mentioned this in my &lt;a href=&quot;https://github.com/davidkroell/docker-deepdive&quot;&gt;presentation about the Docker ecosystem&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2&gt;What we need&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;A Linux server with Docker (18.09+) and SSH access&lt;/li&gt;
+&lt;li&gt;A Windows machine (your device)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Every command issued on the windows machine will be executed on the linux server.&lt;/p&gt;
+&lt;h2&gt;Preparation&lt;/h2&gt;
+&lt;p&gt;We are now going to prepare the environment.&lt;/p&gt;
+&lt;p&gt;A dollar sign (&lt;code class=&quot;language-text&quot;&gt;$&lt;/code&gt;) means, that this command should be executed on the linux server.
+A greater than sign (&lt;code class=&quot;language-text&quot;&gt;&amp;gt;&lt;/code&gt;) means, that this command should be executed on the windows machine.&lt;/p&gt;
+&lt;h3&gt;Docker client&lt;/h3&gt;
+&lt;p&gt;As far as I know, the standalone Docker client is not publicy available for Windows,
+but it is built in Go and it’s open source, so a binary may be built from source.&lt;/p&gt;
+&lt;p&gt;For this, we will use our linux server with Docker installed.&lt;/p&gt;
+&lt;p&gt;First, check if Docker version satisfies our needs.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;$ docker -v
+Docker version &lt;span class=&quot;token number&quot;&gt;18.09&lt;/span&gt;.4, build d14af54&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;If the Docker version is not at least 18.09, update your daemon.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;$ &lt;span class=&quot;token function&quot;&gt;git&lt;/span&gt; clone https://github.com/docker/cli
+$ &lt;span class=&quot;token builtin class-name&quot;&gt;cd&lt;/span&gt; cli
+
+&lt;span class=&quot;token comment&quot;&gt;# build the windows binary&lt;/span&gt;
+$ &lt;span class=&quot;token function&quot;&gt;make&lt;/span&gt; -f docker.Makefile binary-windows&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The build runs inside a Docker container and therefore does not require any other dependencies.
+The binary is then outputted in the &lt;code class=&quot;language-text&quot;&gt;build&lt;/code&gt; directory.
+You can check the file type with the Linux &lt;code class=&quot;language-text&quot;&gt;file&lt;/code&gt; utility.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;$ &lt;span class=&quot;token function&quot;&gt;file&lt;/span&gt; build/docker-windows-amd64
+build/docker-windows-amd64: PE32+ executable &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;console&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; x86-64, &lt;span class=&quot;token keyword&quot;&gt;for&lt;/span&gt; MS Windows&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now, copy the file to your Windows machine and rename it to &lt;code class=&quot;language-text&quot;&gt;docker&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token operator&quot;&gt;&gt;&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;scp&lt;/span&gt; johndoe@example.com:cli/build/docker-windows-amd64 docker&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You may now execute it with &lt;code class=&quot;language-text&quot;&gt;./docker&lt;/code&gt;.
+Copy this executeable to a location which is in your path environment variable.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token operator&quot;&gt;&gt;&lt;/span&gt; move docker C:&lt;span class=&quot;token punctuation&quot;&gt;\&lt;/span&gt;Windows&lt;span class=&quot;token punctuation&quot;&gt;\&lt;/span&gt;System32
+
+&lt;span class=&quot;token comment&quot;&gt;# check version&lt;/span&gt;
+&lt;span class=&quot;token operator&quot;&gt;&gt;&lt;/span&gt; docker -v
+Docker version &lt;span class=&quot;token number&quot;&gt;18.09&lt;/span&gt;.0-dev, build 51668a30&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You may now try the client out.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token operator&quot;&gt;&gt;&lt;/span&gt; docker info
+error during connect: Get http://%2F%2F.%2Fpipe%2Fdocker_engine/v1.39/info: &lt;span class=&quot;token function&quot;&gt;open&lt;/span&gt; //./pipe/docker_engine: Das System kann die angegebene Datei nicht finden. In the default daemon configuration on Windows, the docker client must be run elevated to connect. This error may also indicate that the docker daemon is not running.&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;As you can see, this does not work, because there is only the client installed, but not the daemon.&lt;/p&gt;
+&lt;h3&gt;DOCKER_HOST and SSH remotes&lt;/h3&gt;
+&lt;p&gt;The Docker client wants to connect to a special file in the filesystem.
+The daemon to connect to, can be specified in the CLI with the parameter &lt;code class=&quot;language-text&quot;&gt;-H&lt;/code&gt; (host).&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token operator&quot;&gt;&gt;&lt;/span&gt; docker -H ssh://johndoe@example.com info
+johndoe@example.com&apos;s password:
+Containers: &lt;span class=&quot;token number&quot;&gt;17&lt;/span&gt;
+ Running: &lt;span class=&quot;token number&quot;&gt;6&lt;/span&gt;
+ Paused: &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+ Stopped: &lt;span class=&quot;token number&quot;&gt;11&lt;/span&gt;
+Images: &lt;span class=&quot;token number&quot;&gt;117&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;output truncated&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Type in your password and the Docker info prints out.
+You may of course automate this with passwordless login, utilizing private keys.&lt;/p&gt;
+&lt;p&gt;As of now, you have to specify &lt;code class=&quot;language-text&quot;&gt;-H ssh://...&lt;/code&gt; in every call.
+The environment variable &lt;code class=&quot;language-text&quot;&gt;DOCKER_HOST&lt;/code&gt; can be used to set this automatically.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token operator&quot;&gt;&gt;&lt;/span&gt; &lt;span class=&quot;token builtin class-name&quot;&gt;set&lt;/span&gt; &lt;span class=&quot;token assign-left variable&quot;&gt;DOCKER_HOST&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;ssh://johndoe@example.com
+&lt;span class=&quot;token operator&quot;&gt;&gt;&lt;/span&gt; docker info
+johndoe@example.com&apos;s password:
+Containers: &lt;span class=&quot;token number&quot;&gt;17&lt;/span&gt;
+ Running: &lt;span class=&quot;token number&quot;&gt;6&lt;/span&gt;
+ Paused: &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+ Stopped: &lt;span class=&quot;token number&quot;&gt;11&lt;/span&gt;
+Images: &lt;span class=&quot;token number&quot;&gt;117&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;output truncated&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This variable is only available in the current session.
+To set this permanent, the Windows toolset can be used.
+A guide for this is available &lt;a href=&quot;http://www.forbeslindesay.co.uk/post/42833119552/permanently-set-environment-variables-on-windows&quot;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;h3&gt;Conclusion&lt;/h3&gt;
+&lt;p&gt;Now, you are able to access a Docker daemon from your local windows device and your virtual machines are still working.
+Additional software is not needed, just a simple binary.&lt;/p&gt;</content:encoded></item><item><title><![CDATA[NPM basics]]></title><description><![CDATA[NPM (short for Node Package Manager) is a well known package manager used in web development.
+NPM provides a huge database of packages that…]]></description><link>https://dominikaschbacher.com/2019/01/npm-basics/</link><guid isPermaLink="false">https://dominikaschbacher.com/2019/01/npm-basics/</guid><pubDate>Thu, 24 Jan 2019 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;NPM (short for Node Package Manager) is a well known package manager used in web development.
+NPM provides a huge database of packages that can easily be installed using the command line application.&lt;/p&gt;
+&lt;p&gt;When installing Node.js, NPM will be installed automatically on your machine.
+To get the current version of the installed instance you can run the following command:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# show version&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; -v&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To initialize a package and to configure the default values for the initiation process the following commands can be used:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# init package&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; init
+&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; init -y &lt;span class=&quot;token comment&quot;&gt;# accept default values&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# set default npm values&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; config &lt;span class=&quot;token builtin class-name&quot;&gt;set&lt;/span&gt; init-author-name
+&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; &lt;span class=&quot;token builtin class-name&quot;&gt;set&lt;/span&gt; init-license &lt;span class=&quot;token string&quot;&gt;&quot;MIT&quot;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# get default npm values&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; get init-author-name
+
+&lt;span class=&quot;token comment&quot;&gt;# delete default npm values&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; config delete init-author-name&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;NPM uses a configuration file to get all required dependencies for a project.
+These dependencies are stored in a file called &lt;code class=&quot;language-text&quot;&gt;package.json&lt;/code&gt;, located at the root of the project.
+The following commands can be used to install packages and save them to the required dependencies:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;install&lt;/span&gt; lodash --save
+
+&lt;span class=&quot;token comment&quot;&gt;# install from dependencies&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;install&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# no dev-dependencies&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;install&lt;/span&gt; --production&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To remove a package from a project the following commands can be used:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; uninstall gulp-sass --save-dev
+&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; remove gulp --save-dev&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;NPM is also capable of installing a specific version of a particular package. Therefore the following commands can be used:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;install&lt;/span&gt; lodash@4.17.3 --save
+
+&lt;span class=&quot;token comment&quot;&gt;# update to latest&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; update lodash
+
+&lt;span class=&quot;token comment&quot;&gt;# auto update minor&lt;/span&gt;
+&lt;span class=&quot;token string&quot;&gt;&quot;lodash&quot;&lt;/span&gt; &lt;span class=&quot;token builtin class-name&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;^4.17.11&quot;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# auto update patch&lt;/span&gt;
+&lt;span class=&quot;token string&quot;&gt;&quot;lodash&quot;&lt;/span&gt; &lt;span class=&quot;token builtin class-name&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;~4.17.11&quot;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;A package can not only be installed into a project folder but also as a global package using the following command:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# install global package&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;npm&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;install&lt;/span&gt; -g nodemon&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Thanks to Brad Traversy for providing this &lt;a href=&quot;https://youtu.be/jHDhaSSKmB0&quot;&gt;usefuly video&lt;/a&gt; about the basics of NPM.&lt;/p&gt;</content:encoded></item><item><title><![CDATA[MongoDB basics]]></title><description><![CDATA[MongoDB is one of the leading NoSQL databases and is often used when dealing
+with new technologies like NodeJS, React or Angular. To…]]></description><link>https://dominikaschbacher.com/2018/10/mongodb-basics/</link><guid isPermaLink="false">https://dominikaschbacher.com/2018/10/mongodb-basics/</guid><pubDate>Sun, 28 Oct 2018 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;MongoDB is one of the leading NoSQL databases and is often used when dealing
+with new technologies like NodeJS, React or Angular. To understand the basics
+of MongoDB I created this post that shows a few queries to help you understand
+the structure and functionality of the database.&lt;/p&gt;
+&lt;p&gt;In MongoDB we have so called collections which can be interpreted as tables, where
+you can store documents. A document is basically like a row in an SQL database that
+can have as many fields as you want. A field is a key – value pair stored in a document.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Show and use databases:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# show all databases&lt;/span&gt;
+show dbs
+
+&lt;span class=&quot;token comment&quot;&gt;# use a database&lt;/span&gt;
+use &lt;span class=&quot;token operator&quot;&gt;&amp;lt;&lt;/span&gt;db_name&lt;span class=&quot;token operator&quot;&gt;&gt;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# show the current database name&lt;/span&gt;
+db&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;These documents can also have different amounts of fields, like in the following example:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;db.customers.insert&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+        first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Bryan&quot;&lt;/span&gt;,
+        last_name:&lt;span class=&quot;token string&quot;&gt;&quot;Cranston&quot;&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;,
+    &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+        first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Aaron&quot;&lt;/span&gt;,
+        last_name:&lt;span class=&quot;token string&quot;&gt;&quot;Paul&quot;&lt;/span&gt;,
+        gender:&lt;span class=&quot;token string&quot;&gt;&quot;male&quot;&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;Update documents in collection:&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Documents can be updated with all fields at once, but single fields can also change their value.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# update whole document&lt;/span&gt;
+db.customers.update&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Bryan&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;,&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+    first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Bryan&quot;&lt;/span&gt;,
+    last_name:&lt;span class=&quot;token string&quot;&gt;&quot;Cranston&quot;&lt;/span&gt;,
+    gender:&lt;span class=&quot;token string&quot;&gt;&quot;male&quot;&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# change one field&lt;/span&gt;
+db.customers.update&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Aaron&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;,&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token variable&quot;&gt;$set&lt;/span&gt;:&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;gender:&lt;span class=&quot;token string&quot;&gt;&quot;male&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+db.customers.update&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Aaron&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;,&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token variable&quot;&gt;$set&lt;/span&gt;:&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;age:39&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# increment field&lt;/span&gt;
+db.customers.update&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Aaron&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;,&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token variable&quot;&gt;$inc&lt;/span&gt;:&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;age:5&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# remove field&lt;/span&gt;
+db.customers.update&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Aaron&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;,&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token variable&quot;&gt;$unset&lt;/span&gt;:&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;age:1&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# insert when updating non existing documents&lt;/span&gt;
+db.customers.update&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Anna&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;,
+    &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Anna&quot;&lt;/span&gt;, last_name:&lt;span class=&quot;token string&quot;&gt;&quot;Gunn&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;,
+    &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;upsert: true&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# change key&lt;/span&gt;
+db.customers.update&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Aaron&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;,&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token variable&quot;&gt;$rename&lt;/span&gt;:&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;gender&quot;&lt;/span&gt;&lt;span class=&quot;token builtin class-name&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;sex&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;Remove document:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# remove all with name Aaron&lt;/span&gt;
+db.customers.remove&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Aaron&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# remove first one named Aaron&lt;/span&gt;
+db.customers.remove&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Aaron&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;,&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;justOne:true&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;Find documents:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# show all documents in collection&lt;/span&gt;
+db.customers.find&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# where first name is Anna&lt;/span&gt;
+db.customers.find&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Anna&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# where first name is Anna or Jon&lt;/span&gt;
+db.customers.find&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token variable&quot;&gt;$or&lt;/span&gt;:&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Anna&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;,&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;first_name:&lt;span class=&quot;token string&quot;&gt;&quot;Jon&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# greater than / less than (gt/lt/gte/lte)&lt;/span&gt;
+db.customers.find&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;age:&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token variable&quot;&gt;$lt&lt;/span&gt;:40&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# find by interleaved fields&lt;/span&gt;
+db.customers.find&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;address.city&quot;&lt;/span&gt;&lt;span class=&quot;token builtin class-name&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;Los Angeles&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;Sorting, count and foreach:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# sorting&lt;/span&gt;
+db.customers.find&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;.sort&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;last_name: &lt;span class=&quot;token number&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;   &lt;span class=&quot;token comment&quot;&gt;# ascending order&lt;/span&gt;
+db.customers.find&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;.sort&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;last_name: -1&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;  &lt;span class=&quot;token comment&quot;&gt;# descending order&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# count&lt;/span&gt;
+db.customers.find&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;.sort&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;last_name: -1&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;.count&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# limit to 5 results&lt;/span&gt;
+db.customers.find&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;.sort&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;last_name: -1&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;.limit&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# print all customer names&lt;/span&gt;
+db.customers.find&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;.forEach&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;function&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;doc&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+    print&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;Customer name: &quot;&lt;/span&gt;+doc.first_name&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Thanks for the &lt;a href=&quot;https://youtu.be/pWbMrx5rVBE&quot;&gt;great video&lt;/a&gt; on MongoDB to Brad Traversy.
+The video provides you with the same content listed above.&lt;/p&gt;</content:encoded></item><item><title><![CDATA[Time saving Cisco IOS commands]]></title><description><![CDATA[When viewing the configuration of implemented technologies you often get a huge list returned
+with a bunch of useless entries that are…]]></description><link>https://dominikaschbacher.com/2018/08/cisco-ios-commands/</link><guid isPermaLink="false">https://dominikaschbacher.com/2018/08/cisco-ios-commands/</guid><pubDate>Sun, 05 Aug 2018 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;When viewing the configuration of implemented technologies you often get a huge list returned
+with a bunch of useless entries that are simply not relevant in your case. Luckily there are
+some time saving commands available in Cisco’s IOS operating system that can filter out irrelevant
+information and only show those things you really care about.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Include / Exclude:&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;The include and exclude commands can be used to show only lines that contain a specific keyword or sort those that do.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;text&quot;&gt;&lt;pre class=&quot;language-text&quot;&gt;&lt;code class=&quot;language-text&quot;&gt;# show only lines containing clock
+Router#show run | inc clock
+
+# exclude useless processes
+Router#show processes cpu | exc 0.00
+
+# exclude useless telephone entries
+Router#show mac-address-table | exc SEP
+
+# only show entries for mac address beginning with abcd
+Router#show mac-address-table | inc abcd&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;Selection:&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;With section it is very easy to verify that your configuration of a specific technology is correct or if it is missing something.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;text&quot;&gt;&lt;pre class=&quot;language-text&quot;&gt;&lt;code class=&quot;language-text&quot;&gt;# show only router configuration
+Router#show run | section router
+
+# show only ospf configuration
+Router#show run | section ospf&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;Do:&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;This command you may already know, nevertheless it’s one of the most practical ones, because it allows you to run commands from any configuration path in IOS.&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;text&quot;&gt;&lt;pre class=&quot;language-text&quot;&gt;&lt;code class=&quot;language-text&quot;&gt;# show interfaces configuration inside router configuration mode
+Router(config-router)#do show ip int brief&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Thanks to Network Chuck for providing a very &lt;a href=&quot;https://youtu.be/9Vs56S95Mrs&quot;&gt;useful video tutorial&lt;/a&gt; on YouTube.
+If you want to watch the full video do so, it’s great. For even more time saving cli
+hacks check out the &lt;a href=&quot;https://www.udemy.com/cool-cisco-ios-commands-master-cli-tips-cli-like-a-boss-time-saving&quot;&gt;free Udemy course by David Bombal&lt;/a&gt;.&lt;/p&gt;</content:encoded></item><item><title><![CDATA[Add locations in Nginx]]></title><description><![CDATA[What is an Nginx location? Example web uri: https://domain/page2 On the web server there could simply be a folder inside the root directory…]]></description><link>https://dominikaschbacher.com/2018/03/nginx-locations/</link><guid isPermaLink="false">https://dominikaschbacher.com/2018/03/nginx-locations/</guid><pubDate>Wed, 07 Mar 2018 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;&lt;strong&gt;What is an Nginx location?&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Example web uri: &lt;a href=&quot;https://domain/page2&quot;&gt;https://domain/page2&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;On the web server there could simply be a folder inside the root directory called page2 to make this link available.
+There is also another possibility to create such links by using locations.
+When using locations the content folder can be anywhere as long it can be accessed by the www-data user and appropriate permissions.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Add a location:&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;To add locations you have to edit the site configuration file.
+In my case I just have the default site enabled, because I can only access my server by one domain so I have to edit it like so:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;bash&quot;&gt;&lt;pre class=&quot;language-bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# edit default site configuration&lt;/span&gt;
+&lt;span class=&quot;token function&quot;&gt;sudo&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;nano&lt;/span&gt; /etc/nginx/sites-enabled/default&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;nginx&quot;&gt;&lt;pre class=&quot;language-nginx&quot;&gt;&lt;code class=&quot;language-nginx&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# add location (domain/blog)&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;location&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;/&lt;/span&gt;blog &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;root&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;/&lt;/span&gt;var&lt;span class=&quot;token operator&quot;&gt;/&lt;/span&gt;www&lt;span class=&quot;token operator&quot;&gt;/&lt;/span&gt;pages&lt;span class=&quot;token operator&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;try_files&lt;/span&gt; &lt;span class=&quot;token variable&quot;&gt;$uri&lt;/span&gt; &lt;span class=&quot;token variable&quot;&gt;$uri&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;/&lt;/span&gt;blog&lt;span class=&quot;token operator&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;token keyword&quot;&gt;index&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;php&lt;span class=&quot;token operator&quot;&gt;?&lt;/span&gt;args&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;token comment&quot;&gt;# wordpress routes&lt;/span&gt;
+
+    &lt;span class=&quot;token comment&quot;&gt;# include php&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;location&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;~&lt;/span&gt; \&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;php$ &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;token keyword&quot;&gt;include&lt;/span&gt; snippets&lt;span class=&quot;token operator&quot;&gt;/&lt;/span&gt;fastcgi&lt;span class=&quot;token operator&quot;&gt;-&lt;/span&gt;php&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;conf&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;token keyword&quot;&gt;fastcgi_param&lt;/span&gt; SCRIPT_FILENAME &lt;span class=&quot;token variable&quot;&gt;$request_filename&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;token keyword&quot;&gt;fastcgi_pass&lt;/span&gt; unix&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;/&lt;/span&gt;var&lt;span class=&quot;token operator&quot;&gt;/&lt;/span&gt;run&lt;span class=&quot;token operator&quot;&gt;/&lt;/span&gt;php&lt;span class=&quot;token operator&quot;&gt;/&lt;/span&gt;php7&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;-&lt;/span&gt;fpm&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;sock&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;Difference between root and alias:&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;When using root, the folder name has to be the same as the location name, because you just provide the path to the parent folder, not the full location.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;configuration path:&lt;/strong&gt; /var/www/pages/&lt;br&gt;
+&lt;strong&gt;points at:&lt;/strong&gt; /var/www/pages/blog&lt;br&gt;
+&lt;strong&gt;used by:&lt;/strong&gt; domain/blog&lt;/p&gt;
+&lt;p&gt;When using alias, you have to enter the full location path but therefore it doesn’t have to be named like the location name.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;configuration path:&lt;/strong&gt; /var/www/pages/test&lt;br&gt;
+&lt;strong&gt;used by:&lt;/strong&gt; domain/blog&lt;/p&gt;</content:encoded></item><item><title><![CDATA[First post]]></title><description><![CDATA[Hi, my name is Dominik and I’m starting do do blog posts every now and then, so stay tuned for more.
+This blog is going to be tech related…]]></description><link>https://dominikaschbacher.com/2018/03/first-post/</link><guid isPermaLink="false">https://dominikaschbacher.com/2018/03/first-post/</guid><pubDate>Sun, 04 Mar 2018 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;Hi, my name is Dominik and I’m starting do do blog posts every now and then, so stay tuned for more.
+This blog is going to be tech related, so it will feature stuff like linux, coding, scripting  and so on.
+For more posts in the future!&lt;/p&gt;
+&lt;p&gt;Cheers&lt;/p&gt;</content:encoded></item></channel></rss>
