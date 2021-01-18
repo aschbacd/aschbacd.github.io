@@ -1,11 +1,11 @@
 module.exports = {
   siteMetadata: {
-    title: `aschbacd.github.io`,
+    title: `dominikaschbacher.com`,
     author: {
       name: `Dominik Aschbacher`
     },
     description: `Blog for GitHub Pages`,
-    siteUrl: `https://aschbacd.github.io`,
+    siteUrl: `https://dominikaschbacher.com`,
     social: {
       twitter: `aschbacd`,
     },
