@@ -33,7 +33,7 @@
     "typeface-montserrat": "0.0.75"
   },
   "devDependencies": {
-    "prettier": "2.1.2"
+    "prettier": "2.6.2"
   },
   "homepage": "https://github.com/aschbacd/aschbacd.github.io",
   "keywords": [
